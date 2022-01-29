@@ -1,0 +1,156 @@
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="black" />
+    <link rel="icon" href="favicon.ico">
+    <link rel="stylesheet" href="normalize.css">
+    <link rel="stylesheet" href="concrete-locked-dark.css">
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/augmented-ui@2/augmented-ui.min.css">
+    <script src="alpine.3.7.0.min.js" defer></script>
+    <!-- https://github.com/joewalnes/reconnecting-websocket/blob/master/reconnecting-websocket.min.js -->
+    <!--script src="reconnecting-websocket.js"></script-->
+    <script src="https://unpkg.com/xstate@4/dist/xstate.js"></script>
+    <title>Woodward Sector</title>
+    <style> 
+       /* http://www.generatecss.com/text-effects/3d */
+        #title3d {
+            position: absolute;
+            top: 0;
+            left: 0; right: 0;
+            font-size: 57px;font-family: Verdana;color: #FFFFFF;font-style :italic;text-shadow:0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb, 0 4px 0 #b9b9b9, 0 5px 0 #aaa, 0 6px 1px rgba(0, 0, 0, .1), 0 0 5px rgba(0, 0, 0, .1), 0 1px 3px rgba(0, 0, 0, .3), 0 3px 5px rgba(0, 0, 0, .2), 0 5px 10px rgba(0, 0, 0, .25), 0 10px 10px rgba(0, 0, 0, .2), 0 20px 20px rgba(0, 0, 0, .15); text-align:center;}
+    </style> 
+    <style>
+        
+        
+        /* alpinejs */
+        [x-cloak] { display: none !important; }
+
+        #app {
+            background: url(starsbg.jpg);
+            background-size: cover;
+            background-position: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        main {
+            padding: 2em;
+        }
+        small {
+            font-size: 0.7em;
+        }
+        .dialog button {
+            width: 70%;
+            margin: 0.7em;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .dialog {
+            width: 100%;
+            --aug-border-bg: gold;
+            background-color: black;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            padding-top: 1.5em;
+            padding-bottom: 1.5em;
+            padding-left: 1em;
+            padding-right: 1em;
+        }
+
+        .loginArea {
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" x-data="rootdata">
+        <main>
+            <h1 id="title3d" x-show="$store.loginFlowState == 'enterlogin'">
+                Woodward Sector
+            </h1>
+            <div data-augmented-ui="
+            tl-2-clip-x tr-scoop-inset br-clip-x bl-clip border
+                " id="loginDialog" class="dialog" x-show="$store.loginFlowState == 'enterlogin'" x-model="username">
+                <label for="username">Enter name:</label>
+                <input type="text" name="username"></input>
+                <button onclick="onClickBeginMission()">Begin Mission<br>Fullscreen</button>
+            </div>
+            <div data-augmented-ui="
+            tl-2-clip-x tr-scoop-inset br-clip-x bl-clip border" id="qrSetupDialog" class="dialog"
+            x-show="$store.loginFlowState == 'setupcamera'"
+            onclick="loginFlowService.send({type:'CONTINUE'})">
+                [Camera]
+            </div>
+            <div data-augmented-ui="
+            tl-2-clip-x tr-scoop-inset br-clip-x bl-clip border" id="qrSetupDialog" class="dialog"
+            x-show="$store.loginFlowState == 'getintoorbit'"
+            onclick="loginFlowService.send({type:'CONTINUE'})">
+                Instructions for getting into orbit
+            </div>
+            <div data-augmented-ui="
+  tl-2-clip-x tr-scoop-inset br-clip-x bl-clip border
+" class="dialog" x-show="$store.loginFlowState == 'maingame'">Woah
+                <button id="goFS">Go fullscreen<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"
+                        fill="currentColor" class="bi bi-arrows-angle-expand" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd"
+                            d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z" />
+                    </svg></button>
+                <script>
+                    var goFS = document.getElementById("goFS");
+                    goFS.addEventListener("click", function () {
+                        if (document.fullscreenElement) {
+                            document.exitFullscreen();
+                        } else {
+                            document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+                        }
+                    }, false);
+                </script>
+            </div>
+        </main>
+    </div>
+    <script>
+        var loginFlowService;
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('loginFlowState', 'enterlogin');
+
+            const loginFlowMachine = XState.createMachine({
+                id: 'loginflow',
+                initial: 'enterlogin',
+                states: {
+                    enterlogin: {
+                        on: { CONTINUE: {target: 'setupcamera' }}
+                    },
+                    setupcamera: {
+                        on: { CONTINUE: {target: 'getintoorbit' }}
+                    },
+                    getintoorbit: {
+                        on: { CONTINUE: {target: 'maingame' }}
+                    },
+                    maingame: {
+                        
+                    }
+                }
+            });
+            loginFlowService = XState.interpret(loginFlowMachine)
+                .onTransition(state => Alpine.store('loginFlowState', state.value));
+                //.onTransition(state => console.log(state.value));
+            loginFlowService.start();
+        });
+
+        function onClickBeginMission() {
+            document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+            loginFlowService.send({type:'CONTINUE'});
+        }
+    </script>
+</body>
+
+</html>
