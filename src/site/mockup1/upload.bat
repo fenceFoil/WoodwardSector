@@ -1,0 +1,1 @@
+scp -P 110 ./* root@woodward:/var/www/woodwardsector.net/
