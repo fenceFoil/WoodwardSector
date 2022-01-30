@@ -137,9 +137,9 @@
             </h1>
             <div data-augmented-ui="
             tl-2-clip-x tr-scoop-inset br-clip-x bl-clip border
-                " id="loginDialog" class="dialog" x-show="gamestate == 'enterlogin'" x-model="username">
+                " id="loginDialog" class="dialog" x-show="gamestate == 'enterlogin'">
                 <label for="username">Enter name:</label>
-                <input type="text" name="username"></input>
+                <input type="text" name="username" x-model="username"></input>
                 <button @click="onBeginMission(true)">Begin Mission!<span x-show="isPhone"><br>(Fullscreen)</span></button>
                 <button @click="onBeginMission(false)">Begin Mission!<span x-show="isPhone"><br>(No Fullscreen)</span></button>
             </div>
@@ -160,10 +160,10 @@
         document.addEventListener('alpine:init', () => {
             Alpine.data('rootdata', () => ({
                 gamestate: 'enterlogin',
-                username: 'BeepInfinity',
+                username: localStorage.getItem('username')?localStorage.getItem('username'):`BeepInfinity${Math.floor(Math.random()*100000)}`,
                 cameraTestData: '',
                 cameraTestDataFresh: false,
-                currCameraDeviceIndex: 0,
+                currCameraDeviceIndex: localStorage.getItem('currCameraDeviceIndex')?localStorage.getItem('currCameraDeviceIndex'):0,
                 isPhone: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
                 html5qrcode: new Html5Qrcode("qrSetupDialog", {experimentalFeatures: {
                     useBarCodeDetectorIfSupported: true}}),
@@ -199,6 +199,12 @@
                             console.log("Stopping QR scanner")
                             this.html5qrcode.stop();
                         }
+                    })
+                    this.$watch('currCameraDeviceIndex', v => {
+                        localStorage.setItem('currCameraDeviceIndex', v);
+                    })
+                    this.$watch('username', v => {
+                        localStorage.setItem('username', v);
                     })
                 },
 
